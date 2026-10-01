@@ -9,68 +9,197 @@
 </head>
 
 <body>
-
-    <div class="row">
-        <div class="col-6">
-            <div class="container text-center">
-                <div class="row">
-                    <div class="col">
-                        <input placeholder="Codigo" name="txtCodigoCliente" id="txtCodigoCliente" class="form-control"
-                            type="text">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-6">
+                <form id="frmCliente">
+                    <div class="container text-center">
+                        <div class="row">
+                            <div class="col">
+                                <input pattern="^[0-9]{3,10}$" required placeholder="Codigo" name="txtCodigoCliente"
+                                    id="txtCodigoCliente" class="form-control" type="text">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <input pattern="^[A-Za-záéíóúÁÉÍÓÚñÑ ]{3,}$" required placeholder="Nombre"
+                                    name="txtNombreCliente" id="txtNombreCliente" class="form-control" type="text">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <input placeholder="Direccion" name="txtDireccionCliente" id="txtDireccionCliente"
+                                    class="form-control" type="text">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <input pattern="^[0-9]{4}-[0-9]{4}$" placeholder="Telefono" name="txtTelefonoCliente"
+                                    id="txtTelefonoCliente" class="form-control" type="text">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <input placeholder="Email" name="txtEmailCliente" id="txtEmailCliente"
+                                    class="form-control" type="email">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <select class="form-control" name="cboTipoPersona" id="cboTipoPersona">
+                                    <option value="particular">Particular</option>
+                                    <option value="empresa">Empresa</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <input type="submit" value="Guardar" class="btn btn-primary">
+                                <input type="button" value="Buscar" class="btn btn-secondary">
+                                <input type="reset" value="Limpiar" class="btn btn-warning">
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <input placeholder="Nombre" name="txtNombreCliente" id="txtNombreCliente" class="form-control"
-                            type="text">
+                </form>
+            </div>
+            <div class="col-6">
+                <form id="frmConsultarCliente">
+                    <div class="container text-center">
+                        <div class="row">
+                            <div class="col">BUSQUEDA DE CLIENTES</div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th colspan="7">
+                                                    <input type="search" placeholder="buscar por codigo, nombre"
+                                                        id="txtBuscarCliente" name="txtBuscarCliente"
+                                                        class="form-control">
+                                                </th>
+                                            </tr>
+                                            <tr>
+                                                <th>Codigo</th>
+                                                <th>Nombre</th>
+                                                <th>Direccion</th>
+                                                <th>Telefono</th>
+                                                <th>Email</th>
+                                                <th>Tipo</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tblClientes"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <input placeholder="Direccion" name="txtDireccionCliente" id="txtDireccionCliente"
-                            class="form-control" type="text">
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <input placeholder="Telefono" name="txtTelefonoCliente" id="txtTelefonoCliente"
-                            class="form-control" type="text">
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <input placeholder="Email" name="txtEmailCliente" id="txtEmailCliente" class="form-control"
-                            type="text">
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <select class="form-control" name="cboTipoPersona" id="cboTipoPersona">
-                            <option value="particular">Particular</option>
-                            <option value="empresa">Empresa</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <input type="button" value="Guardar" class="btn btn-primary">
-                        <input type="button" value="Buscar" class="btn btn-secondary">
-                        <input type="reset" value="Limpiar" class="btn btn-warning">
-                    </div>
-                </div>
+                </form>
             </div>
         </div>
-        <div class="col-6">
-
-        </div>
-    </div>
     </div>
 </body>
 <script>
+    var accion = 'nuevo',
+        idCliente = '';
 
+    frmCliente.addEventListener('submit', (e) => {
+        e.preventDefault();
+        guardarClientes();
+
+    });
+    frmCliente.addEventListener('reset', (e) => {
+        e.preventDefault();
+        limpiarFormulario();
+    });
+    txtBuscarCliente.addEventListener('keyup', (e) => {
+        e.preventDefault();
+        obtenerClientes(txtBuscarCliente.value);
+    });
+    document.addEventListener("DOMContentLoaded", obtenerClientes);
+
+    async function obtenerClientes(buscar = "") {
+        let response = await fetch(`/clientes?buscar=${buscar}`),
+            datos = await response.json();
+        mostrarDatos(datos);
+    }
+    function mostrarDatos(datos) {
+        let filas = "";
+        datos.forEach(e => {
+            filas += `
+                <tr onClick='modificarCliente(${JSON.stringify(e)}, event)'>
+                    <td>${e.codigo}</td>
+                    <td>${e.nombre}</td>
+                    <td>${e.direccion}</td>
+                    <td>${e.telefono}</td>
+                    <td>${e.email}</td>
+                    <td>${e.tipo}</td>
+                    <td>
+                        <input onClick='eliminarCliente(${JSON.stringify(e)}, event)' 
+                            type="button" value="DEL" class="btn btn-danger"/>
+                    </td>
+                </tr>
+            `;
+        });
+        tblClientes.innerHTML = filas;
+    }
+    function modificarCliente(data, event) {
+        event.preventDefault();
+        idCliente = data.idCliente;
+        accion = "modificar";
+
+        txtCodigoCliente.value = data.codigo;
+        txtNombreCliente.value = data.nombre;
+        txtDireccionCliente.value = data.direccion;
+        txtTelefonoCliente.value = data.telefono;
+        txtEmailCliente.value = data.email;
+        cboTipoPersona.value = data.tipo;
+    }
+    function eliminarCliente(data, event) {
+        event.preventDefault();
+        if (confirm(`¿Seguro de eliminar al cliente: ${data.nombre}?`)) {
+            idCliente = data.idCliente;
+            accion = "eliminar";
+            guardarClientes();
+        }
+    }
+    async function guardarClientes() {
+        let datos = {
+            codigo: txtCodigoCliente.value,
+            nombre: txtNombreCliente.value,
+            direccion: txtDireccionCliente.value,
+            telefono: txtTelefonoCliente.value,
+            email: txtEmailCliente.value,
+            tipo: cboTipoPersona.value,
+            accion,
+            idCliente
+        };
+        let response = await fetch('/cliente', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(datos)
+        }), respuesta = await response.json();
+        if (respuesta.msg != "ok") {
+            alert("Error: " + respuesta.msg);
+            return;
+        }
+        obtenerClientes();
+        limpiarFormulario();
+    }
+    function limpiarFormulario() {
+        accion = 'nuevo';
+        idCliente = '';
+        txtCodigoCliente.value = '';
+        txtNombreCliente.value = '';
+        txtDireccionCliente.value = '';
+        txtTelefonoCliente.value = '';
+        txtEmailCliente.value = '';
+        cboTipoPersona.value = 'particular';
+    }
 </script>
 
 </html>
-git add index.html
-git commit -m "Agregué Bootstrap y botones"
-git push origin main
