@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
+
+</html>
 
 <head>
     <meta charset="UTF-8">
@@ -100,6 +102,183 @@
             </div>
         </div>
     </div>
+
+    <div class="container-fluid mt-4" id="seccionPeriodos">
+        <h5 class="text-center">IMPUESTO A LAS ACTIVIDADES ECONÓMICAS - PERÍODOS</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <input id="p_usuario" class="form-control mb-1" placeholder="Usuario responsable (auditoría)">
+                <input id="p_idCliente" class="form-control form-control-lg mb-1"
+                    placeholder="ID del cliente (empresa)">
+                <select id="p_producto" class="form-select form-select-lg mb-1">
+                    <option value="">Seleccione producto...</option>
+                    <option value="11801">11801 - Comercio</option>
+                    <option value="11802">11802 - Industria</option>
+                </select>
+                <label class="small">Desde (incluido)</label>
+                <input id="p_desde" type="date" class="form-control form-control-lg mb-1">
+                <label class="small">Hasta (no incluido)</label>
+                <input id="p_hasta" type="date" class="form-control form-control-lg mb-1">
+                <input id="p_monto" type="number" step="0.01" min="0" class="form-control form-control-lg mb-1"
+                    placeholder="Monto o activo (balance)">
+                <input id="p_cantidad" type="number" step="0.01" value="1.00" class="form-control form-control-lg mb-2"
+                    placeholder="Cantidad">
+                <div class="text-center">
+                    <button class="btn btn-lg btn-info" onclick="calcularPeriodo()">Calcular</button>
+                    <button class="btn btn-lg btn-primary" onclick="guardarPeriodo()">Guardar período</button>
+                    <button class="btn btn-lg btn-warning" onclick="cambioBalance()">Cambio de balance</button>
+                    <button class="btn btn-lg btn-secondary" onclick="listarPeriodos()">Ver historial</button>
+                </div>
+                <div id="p_mensaje" class="mt-2"></div>
+            </div>
+
+            <div class="col-md-6">
+                <div id="p_detalle" class="card card-body mb-3" style="display:none"></div>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Desde</th>
+                            <th>Hasta</th>
+                            <th>Balance</th>
+                            <th>Precio</th>
+                            <th>Estado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="p_tabla"></tbody>
+                </table>
+                <div id="p_vigente" class="fw-bold"></div>
+                <div id="p_total" class="text-muted small"></div>
+                <hr>
+                <b>Simular cobro (usa solo los períodos que coinciden)</b>
+                <div class="d-flex gap-1 my-1">
+                    <input id="c_desde" type="date" class="form-control"><input id="c_hasta" type="date"
+                        class="form-control">
+                    <button class="btn btn-success" onclick="simularCobro()">Calcular</button>
+                </div>
+                <div id="c_resultado" class="small"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_PERIODOS = "/periodos";   // mismo servidor (puerto 3000)
+
+        function datosPeriodo(accion) {
+            return {
+                accion,
+                idCliente: document.getElementById("p_idCliente").value,
+                codigo_producto: document.getElementById("p_producto").value,
+                desde: document.getElementById("p_desde").value,
+                hasta: document.getElementById("p_hasta").value,
+                monto: document.getElementById("p_monto").value,
+                cantidad: document.getElementById("p_cantidad").value || "1.00",
+                usuario: document.getElementById("p_usuario").value.trim()
+            };
+        }
+
+        async function llamarPeriodos(accion, extra = {}) {
+            const r = await fetch(API_PERIODOS, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ...datosPeriodo(accion), ...extra })
+            });
+            return r.json();
+        }
+
+        function mostrarMensaje(texto, ok) {
+            const m = document.getElementById("p_mensaje");
+            m.className = "mt-2 alert " + (ok ? "alert-success" : "alert-danger");
+            m.textContent = texto;
+        }
+
+        async function calcularPeriodo() {           // RF 17 / RF 18
+            const r = await llamarPeriodos("previsualizar");
+            const box = document.getElementById("p_detalle");
+            if (!r.ok) { box.style.display = "none"; return mostrarMensaje(r.mensaje, false); }
+            const d = r.detalle;
+            box.style.display = "block";
+            box.innerHTML = `
+    <b>Detalle del cálculo</b><br>
+    Balance: $${d.balance}<br>
+    Rango aplicado: ${d.rango}<br>
+    Precio base: $${d.precio_base}<br>
+    Excedente: ${d.excedente ?? "—"} | Bloques: ${d.bloques ?? "—"}<br>
+    Adicional: $${d.adicional} | Porcentaje: ${d.porcentaje}<br>
+    <b>Impuesto mensual: $${d.precio_mostrado}</b>
+    ${d.avisos.map(a => `<div class="text-warning">⚠ ${a}</div>`).join("")}`;
+            document.getElementById("p_mensaje").textContent = "";
+            document.getElementById("p_mensaje").className = "";
+        }
+
+        async function guardarPeriodo() {
+            if (!document.getElementById("p_usuario").value.trim()) return mostrarMensaje("Indique el usuario responsable.", false);
+            if (!confirm("¿Guardar el período con el precio calculado?")) return;
+            const r = await llamarPeriodos("nuevo");
+            mostrarMensaje(r.ok ? `Período guardado. Impuesto mensual: $${r.precio}` : r.mensaje, r.ok);
+            if (r.ok) listarPeriodos();
+        }
+
+        async function listarPeriodos() {            // RF 21: vigente separado del total referencial
+            const r = await llamarPeriodos("listar");
+            if (!r.ok) return mostrarMensaje(r.mensaje, false);
+            document.getElementById("p_tabla").innerHTML = r.periodos.map(p => `
+    <tr><td>${p.desde}</td><td>${p.hasta}</td><td>$${p.monto}</td>
+    <td>$${Number(p.precio).toFixed(2)}</td>
+    <td>${p.estado}${p.facturado === "1" ? " (facturado)" : ""}</td>
+    <td><button class="btn btn-sm btn-outline-secondary" onclick="recalcularPeriodo(${p.idPeriodo}, ${p.facturado === "1"})">Recalcular</button></td></tr>`).join("");
+            document.getElementById("p_vigente").textContent =
+                "Impuesto mensual vigente: " + (r.mensual_vigente ? "$" + r.mensual_vigente : "sin período vigente");
+            document.getElementById("p_total").textContent =
+                "Total referencial de períodos (NO es la mensualidad): $" + r.total_referencial;
+        }
+
+        async function cambioBalance() {             // RF 07
+            if (!document.getElementById("p_usuario").value.trim()) return mostrarMensaje("Indique el usuario responsable.", false);
+            if (!confirm("Se cerrará el período vigente en la fecha Desde y se creará uno nuevo. ¿Continuar?")) return;
+            const r = await llamarPeriodos("cambio_balance");
+            mostrarMensaje(r.ok ? `${r.mensaje}. Impuesto mensual: $${r.precio}` : r.mensaje, r.ok);
+            if (r.ok) listarPeriodos();
+        }
+
+        async function recalcularPeriodo(id, facturado) {   // RF 09, 14, 16
+            const motivo = prompt("Motivo del recálculo (se guarda en bitácora). Usa el campo Monto si el balance cambia:");
+            if (!motivo) return;
+            let aut = "";
+            if (facturado) {
+                aut = prompt("Este período ya fue facturado. Nombre de quien autoriza la corrección:") || "";
+                if (!aut) return mostrarMensaje("El período ya fue utilizado en recibos y no puede recalcularse automáticamente.", false);
+            }
+            const r = await llamarPeriodos("recalcular", { idPeriodo: id, motivo, autorizado_por: aut });
+            mostrarMensaje(r.ok ? `${r.mensaje}. Nuevo precio: $${r.precio}` : r.mensaje, r.ok);
+            if (r.ok) listarPeriodos();
+        }
+
+        async function simularCobro() {              // sección 15 / CA 12
+            const r = await llamarPeriodos("cobro", {
+                cobro_desde: document.getElementById("c_desde").value,
+                cobro_hasta: document.getElementById("c_hasta").value
+            });
+            const box = document.getElementById("c_resultado");
+            if (!r.ok) { box.textContent = r.mensaje; return; }
+            box.innerHTML = r.detalle.map(d =>
+                `${d.desde} a ${d.hasta}: ${d.meses} meses × $${d.precio} = <b>$${d.cargo}</b>`).join("<br>") +
+                `<br><b>Total del cobro: $${r.total}</b>` + (r.aviso ? `<div class="text-warning">⚠ ${r.aviso}</div>` : "");
+        }
+
+        // RF 17 / 19 / 20: recalcular solo al cambiar monto, producto o fecha desde
+        let _temporizador;
+        function autoCalcular() {
+            clearTimeout(_temporizador);
+            _temporizador = setTimeout(() => {
+                const d = datosPeriodo("previsualizar");
+                if (d.idCliente && d.codigo_producto && d.desde && d.hasta && d.monto) calcularPeriodo();
+            }, 400);
+        }
+        ["p_monto", "p_producto", "p_desde", "p_hasta", "p_idCliente"].forEach(id =>
+            document.getElementById(id).addEventListener("input", autoCalcular));
+    </script>
+
 </body>
 <script>
     var accion = 'nuevo',
@@ -201,5 +380,12 @@
         cboTipoPersona.value = 'particular';
     }
 </script>
+<script>
+    // Al hacer clic en una fila de clientes, pasar su ID a la sección de períodos
+    document.getElementById("tblClientes").addEventListener("click", () => {
+        document.getElementById("p_idCliente").value = idCliente;
+    });
+</script>
+</body>
 
 </html>
