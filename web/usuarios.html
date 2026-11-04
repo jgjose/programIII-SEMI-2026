@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Usuarios</title>
+  <link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+  <div class="ancha">
+    <div class="barra">
+      <h1>Gestión de usuarios</h1>
+      <button class="sec" id="btnSalir" type="button">Cerrar sesión</button>
+    </div>
+
+    <div class="tarjeta">
+      <h2 id="titulo">Registrar usuario</h2>
+      <form id="formUsuario" autocomplete="off">
+        <input type="hidden" id="idUsuario">
+        <div class="fila">
+          <div><label for="usuario">Usuario</label><input id="usuario" maxlength="35" required></div>
+          <div><label for="clave">Clave</label><input id="clave" type="password" maxlength="35" required></div>
+          <div><label for="nombre">Nombre</label><input id="nombre" maxlength="85" required></div>
+          <div><label for="direccion">Dirección</label><input id="direccion" maxlength="100"></div>
+          <div><label for="telefono">Teléfono</label><input id="telefono" maxlength="9" placeholder="0000-0000"></div>
+        </div>
+        <div class="acciones">
+          <button type="submit" id="btnGuardar">Guardar</button>
+          <button type="button" class="sec" id="btnLimpiar">Limpiar / Cancelar</button>
+        </div>
+      </form>
+      <div id="mensaje" class="msg"></div>
+    </div>
+
+    <div class="tarjeta">
+      <h2>Buscar usuarios</h2>
+      <div class="busqueda">
+        <input id="termino" placeholder="Buscar por usuario, nombre, dirección o teléfono">
+        <button type="button" id="btnBuscar">Buscar</button>
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>Usuario</th><th>Nombre</th><th>Dirección</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+        <tbody id="tabla"></tbody>
+      </table>
+    </div>
+  </div>
+  <script src="/js/usuarios.js"></script>
+</body>
+</html>
